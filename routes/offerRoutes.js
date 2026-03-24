@@ -1,10 +1,11 @@
 import express from "express";
 import {protect} from "../middlewares/auth.js";
 import { authorize } from '../middlewares/roles.js';
-import {createOffer, getAllHr, getRmgOffersWithJDs, getAllOffers, assignOfferToHr, updateOffer, deleteOffer, getLatestFilteredUnfilteredCandidates, getAllFilteredUnfilteredCandidates } from "../controllers/offerController.js";
+import {createOffer, getAllHr, getRmgOffersWithJDs, getAllOffers, assignOfferToHr, updateOffer, deleteOffer, getLatestFilteredUnfilteredCandidates, getAllFilteredUnfilteredCandidates, suggestSkills } from "../controllers/offerController.js";
 
 const router = express.Router();
 
+router.post("/suggest-skills", protect, authorize("RMG"), suggestSkills);
 router.post("/", protect, authorize("RMG"), createOffer);
 router.get("/hr", protect, authorize("RMG"), getAllHr);
 router.get("/overview", protect, authorize("RMG"), getRmgOffersWithJDs);

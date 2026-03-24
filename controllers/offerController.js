@@ -37,7 +37,8 @@ import ErrorResponse from "../utils/errorResponse.js";
 import sendEmail from "../utils/sendEmail.js"
 import {offerAssignedTemplate} from "../utils/emailTemplates/offerAssignedTemplate.js"
 import JobDescription from "../models/jobDescription.js";
-import User from "../models/User.js"
+import User from "../models/User.js";
+import { suggestSkillsForRequisition } from "../utils/geminiAI.js";
 
 export const createOffer = asyncHandler(async(req, res, next) => {
     const {
@@ -575,4 +576,22 @@ export const getAllFilteredUnfilteredCandidates = asyncHandler(async (req, res, 
   } catch (err) {
     return next(new ErrorResponse(err.message || 'Failed to fetch candidates', 500));
   }
+});
+
+export const suggestSkills = asyncHandler(async (req, res, next) => {
+  const { jobTitle, description, employmentType, experience, workMode } = req.body;
+  if (!jobTitle || !String(jobTitle).trim()) {
+    return next(new ErrorResponse("Job title is required to suggest skills", 400));
+  }
+  const result = await suggestSkillsForRequisition({
+    jobTitle: String(jobTitle).trim(),
+    description: description != null ? String(description) : "",
+    employmentType: employmentType != null ? String(employmentType) : "",
+    experience: experience != null ? String(experience) : "",
+    workMode: workMode != null ? String(workMode) : "",
+  });
+  if (!result.success) {
+    return next(new ErrorResponse(result.error || "Failed to suggest skills", 500));
+  }
+  res.status(200).json({ success: true, skills: result.skills });
 });

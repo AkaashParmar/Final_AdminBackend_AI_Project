@@ -68,6 +68,58 @@ Make sure the description is professional, engaging, and tailored to attract the
   }
 };
 
+/**
+ * Suggest skills for a requisition form (RMG) using job context.
+ * @param {{ jobTitle: string, description?: string, employmentType?: string, experience?: string, workMode?: string }} ctx
+ * @returns {Promise<{ success: boolean, skills?: string[], error?: string }>}
+ */
+export const suggestSkillsForRequisition = async (ctx) => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const {
+      jobTitle,
+      description = "",
+      employmentType = "",
+      experience = "",
+      workMode = "",
+    } = ctx;
+
+    const prompt = `You are an expert technical recruiter. Based on the job information below, suggest 8–14 concise, industry-standard skill names (technologies, frameworks, tools, or domain skills) relevant to this role.
+
+Return ONLY valid JSON (no markdown fences):
+{"skills":["Skill One","Skill Two"]}
+
+Rules:
+- Short phrases only (1–4 words each).
+- No duplicate or near-duplicate entries.
+- Prefer specific technologies over vague terms like "communication" unless the role is clearly non-technical.
+- If the role is non-technical, suggest domain-relevant skills only.
+
+Job title: ${jobTitle}
+Description: ${description || "Not provided"}
+Employment type: ${employmentType || "Not specified"}
+Work mode: ${workMode || "Not specified"}
+Experience required: ${experience || "Not specified"}`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("Failed to parse AI response as JSON");
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    const raw = Array.isArray(parsed.skills) ? parsed.skills : [];
+    const skills = [...new Set(raw.map((s) => String(s).trim()).filter(Boolean))].slice(0, 16);
+    return { success: true, skills };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      skills: [],
+    };
+  }
+};
+
 // Filter resumes with AI for a JD
 // export async function filterResumesWithAI(jd, candidates) {
 //   try {
@@ -269,7 +321,7 @@ export async function filterResumesWithAI(jd, candidates) {
 
       // Step 3: Filter by AI score primarily, then skills/experience as secondary
       // If score is high, always filter
-      if (evaluation.score >= 35) {
+      if (evaluation.score >= 15) {
         filtered.push(evaluation);
         continue;
       }
